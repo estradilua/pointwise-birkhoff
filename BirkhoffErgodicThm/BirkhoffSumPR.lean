@@ -1,5 +1,4 @@
-import Mathlib.Dynamics.BirkhoffSum.Average
-import Mathlib.Tactic
+import Mathlib
 
 /-- If a function `φ` is invariant under a function `f` (i.e., `φ ∘ f = φ`),
 then `φ` remains invariant under any number of iterations of `f`. -/
@@ -43,12 +42,12 @@ open Finset in
 lemma birkhoffAverage_add {φ ψ : α → ℝ} :
     birkhoffAverage ℝ f (φ + ψ) = birkhoffAverage ℝ f φ + birkhoffAverage ℝ f ψ := by
   funext n x
-  simp [birkhoffAverage, birkhoffSum, sum_add_distrib]
+  simp only [birkhoffAverage, birkhoffSum, Pi.add_apply, sum_add_distrib, smul_eq_mul]
   linarith
 
 open Finset in
 lemma birkhoffAverage_sub {φ ψ : α → ℝ} :
     birkhoffAverage ℝ f (φ - ψ) = birkhoffAverage ℝ f φ - birkhoffAverage ℝ f ψ := by
   funext n x
-  simp [birkhoffAverage, birkhoffSum, sum_add_distrib]
+  simp only [birkhoffAverage, birkhoffSum, Pi.sub_apply, sum_sub_distrib, smul_eq_mul]
   linarith
