@@ -31,7 +31,7 @@ theorem birkhoffAverage_eq_of_invariant
   rw [birkhoffSum_eq_of_invariant h]
   refine (inv_smul_eq_iff₀ ?_).mpr ?_
   · norm_cast; linarith
-  · apply nsmul_eq_smul_cast
+  · simp
 
 lemma birkhoffAverage_neg {φ : α → ℝ} :
     birkhoffAverage ℝ f (-φ) = - birkhoffAverage ℝ f φ := by
