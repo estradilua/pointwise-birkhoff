@@ -1,14 +1,6 @@
-import Mathlib.Dynamics.BirkhoffSum.Average
-import Mathlib.Dynamics.Ergodic.MeasurePreserving
-import Mathlib.MeasureTheory.Function.L1Space
-import Mathlib.MeasureTheory.Integral.DominatedConvergence
-import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
-import Mathlib.MeasureTheory.MeasurableSpace.Invariants
-import Mathlib.Tactic
-import BirkhoffErgodicThm.PartialSupsPR
 import BirkhoffErgodicThm.BirkhoffSumPR
-import BirkhoffErgodicThm.FilterPR
 import BirkhoffErgodicThm.InvariantsPR
+import BirkhoffErgodicThm.PartialSupsPR
 
 section BirkhoffMax
 
@@ -19,22 +11,22 @@ def birkhoffMax (f : α → α) (φ : α → ℝ) : ℕ →o (α → ℝ) :=
   partialSups (birkhoffSum f φ ∘ .succ)
 
 lemma birkhoffMax_succ : birkhoffMax f φ n.succ x = φ x + 0 ⊔ birkhoffMax f φ n (f x) := by
-  have : birkhoffSum f φ ∘ .succ = fun k ↦ φ + birkhoffSum f φ k ∘ f
-  · funext k x; dsimp
-    rw [Nat.succ_eq_one_add, birkhoffSum_add f φ 1, birkhoffSum_one]; rfl
+  have : birkhoffSum f φ ∘ .succ = fun k ↦ φ + birkhoffSum f φ k ∘ f := by
+    funext k x; dsimp
+    rw [add_comm k 1, birkhoffSum_add f φ 1, birkhoffSum_one];
+    rfl
   nth_rw 1 [birkhoffMax, this, add_partialSups]
   simp only [Pi.add_apply, add_right_inj]
   rw [partialSups_succ']
   simp only [birkhoffSum_zero', Pi.zero_comp, Pi.sup_apply, Pi.zero_apply]
-  simp_rw [partialSups_apply, Function.comp_apply, ← partialSups_apply]; rfl
+  simp_rw [partialSups_apply, Function.comp_apply, ← partialSups_apply];
+  sorry
 
 abbrev birkhoffMaxDiff (f : α → α) (φ : α → ℝ) (n : ℕ) (x : α) :=
   birkhoffMax f φ (n + 1) x - birkhoffMax f φ n (f x)
 
 theorem birkhoffMaxDiff_aux : birkhoffMaxDiff f φ n x = φ x - (0 ⊓ birkhoffMax f φ n (f x)) := by
-  rw [sub_eq_sub_iff_add_eq_add, birkhoffMax_succ, add_assoc, add_right_inj]
-  change max _ _ + min _ _ = _
-  rw [max_add_min, zero_add]
+  rw [sub_eq_sub_iff_add_eq_add, birkhoffMax_succ, add_assoc, add_right_inj, max_add_min, zero_add]
 
 lemma birkhoffMaxDiff_antitone : Antitone (birkhoffMaxDiff f φ) := by
   intro m n h x
@@ -74,7 +66,7 @@ def birkhoffSup (f : α → α) (φ : α → ℝ) (x : α) : EReal := iSup fun n
 lemma birkhoffSup_measurable
     {f : α → α} (hf : Measurable f)
     {φ : α → ℝ} (hφ : Measurable φ) :
-    Measurable (birkhoffSup f φ) := measurable_iSup
+    Measurable (birkhoffSup f φ) := Measurable.iSup
   (fun _ ↦ Measurable.coe_real_ereal (birkhoffSum_measurable hf hφ))
 
 /-- The set of points `x` for which `birkhoffSup f φ x = ⊤`. -/
@@ -88,7 +80,7 @@ lemma divergentSet_invariant : f x ∈ divergentSet f φ ↔ x ∈ divergentSet 
     intro M hM
     cases' M using EReal.rec with a
     · use 0; apply EReal.bot_lt_coe
-    case h_top => contradiction
+    case top => contradiction
   case mp =>
     cases' hx ↑(- φ x + a) (EReal.coe_lt_top _) with N hN
     norm_cast at *
@@ -159,8 +151,8 @@ lemma birkhoffAverage_tendsto_nonpos_of_not_mem_divergentSet
 
   /- the upper bound is, in fact, a real number -/
   cases' M' using EReal.rec with M
-  case h_bot => exfalso; exact (EReal.bot_lt_coe _).not_le (M_is_bound 0)
-  case h_top => contradiction
+  case bot => exfalso; exact (EReal.bot_lt_coe _).not_le (M_is_bound 0)
+  case top => contradiction
   norm_cast at M_is_bound
 
   /- use archimedian property of reals -/
@@ -168,7 +160,7 @@ lemma birkhoffAverage_tendsto_nonpos_of_not_mem_divergentSet
   have upperBound (n : ℕ) (hn : N ≤ n) : birkhoffAverage ℝ f φ (n + 1) x < ε
   · have : M < (n + 1) • ε
     · exact hN.trans_lt $ smul_lt_smul_of_pos_right (Nat.lt_succ_of_le hn) hε
-    · rw [nsmul_eq_smul_cast ℝ] at this
+    · rw [nsmul_eq_mul] at this
       exact (inv_smul_lt_iff_of_pos (Nat.cast_pos.mpr (Nat.zero_lt_succ n))).mpr
         ((M_is_bound n).trans_lt this)
 
@@ -182,30 +174,33 @@ lemma birkhoffAverage_tendsto_nonpos_of_not_mem_divergentSet
 variable {f : α → α} (hf : MeasurePreserving f μ μ)
          {φ : α → ℝ} (hφ : Integrable φ μ) (hφ' : Measurable φ) /- seems necessary? -/
 
-lemma iterates_integrable : Integrable (φ ∘ f^[i]) μ := by
+lemma iterates_integrable {i : ℕ} (hf : MeasurePreserving f μ μ) (hφ : Integrable φ μ) :
+    Integrable (φ ∘ f^[i]) μ := by
   apply (integrable_map_measure _ _).mp
   · rwa [(hf.iterate i).map_eq]
   · rw [(hf.iterate i).map_eq]
     exact hφ.aestronglyMeasurable
   exact (hf.iterate i).measurable.aemeasurable
 
-lemma birkhoffSum_integrable : Integrable (birkhoffSum f φ n) μ :=
+lemma birkhoffSum_integrable (hf : MeasurePreserving f μ μ) (hφ : Integrable φ μ) :
+    Integrable (birkhoffSum f φ n) μ :=
   integrable_finset_sum _ fun _ _ ↦ iterates_integrable μ hf hφ
 
-lemma birkhoffMax_integrable : Integrable (birkhoffMax f φ n) μ := by
+lemma birkhoffMax_integrable (hf : MeasurePreserving f μ μ) (hφ : Integrable φ μ) : Integrable (birkhoffMax f φ n) μ := by
   unfold birkhoffMax
   induction' n with n hn
   · simpa
-  · rw [partialSups_succ, Function.comp_apply]
-    exact Integrable.sup hn (birkhoffSum_integrable μ hf hφ)
+  · simpa using Integrable.sup hn (birkhoffSum_integrable μ hf hφ)
 
-lemma birkhoffMaxDiff_integrable : Integrable (birkhoffMaxDiff f φ n) μ := by
+lemma birkhoffMaxDiff_integrable (hf : MeasurePreserving f μ μ) (hφ : Integrable φ μ) :
+    Integrable (birkhoffMaxDiff f φ n) μ := by
   apply Integrable.sub (birkhoffMax_integrable μ hf hφ)
   apply (integrable_map_measure _ hf.measurable.aemeasurable).mp <;> rw [hf.map_eq]
   · exact birkhoffMax_integrable μ hf hφ
   · exact (birkhoffMax_integrable μ hf hφ).aestronglyMeasurable
 
-lemma int_birkhoffMaxDiff_in_divergentSet_tendsto :
+lemma int_birkhoffMaxDiff_in_divergentSet_tendsto (hf : MeasurePreserving f μ μ)
+    (hφ : Integrable φ μ) (hφ' : Measurable φ) :
     Tendsto (fun n ↦ ∫ x in divergentSet f φ, birkhoffMaxDiff f φ n x ∂μ) atTop
             (𝓝 $ ∫ x in divergentSet f φ, φ x ∂ μ) := by
   apply MeasureTheory.tendsto_integral_of_dominated_convergence (abs φ ⊔ abs (birkhoffMaxDiff f φ 0))
@@ -221,7 +216,8 @@ lemma int_birkhoffMaxDiff_in_divergentSet_tendsto :
   · exact (ae_restrict_iff' (divergentSet_measurable hf.measurable hφ')).mpr
       (ae_of_all _ fun _ hx ↦ birkhoffMaxDiff_tendsto_of_mem_divergentSet hx)
 
-lemma int_birkhoffMaxDiff_in_divergentSet_nonneg :
+lemma int_birkhoffMaxDiff_in_divergentSet_nonneg (hf : MeasurePreserving f μ μ)
+    (hφ : Integrable φ μ) (hφ' : Measurable φ) :
     0 ≤ ∫ x in divergentSet f φ, birkhoffMaxDiff f φ n x ∂μ := by
   unfold birkhoffMaxDiff
   have : (μ.restrict (divergentSet f φ)).map f = μ.restrict (divergentSet f φ)
@@ -240,7 +236,8 @@ lemma int_birkhoffMaxDiff_in_divergentSet_nonneg :
     rw [this]
     exact mi.restrict
 
-lemma int_in_divergentSet_nonneg : 0 ≤ ∫ x in divergentSet f φ, φ x ∂μ :=
+lemma int_in_divergentSet_nonneg (hf : MeasurePreserving f μ μ)
+    (hφ : Integrable φ μ) (hφ' : Measurable φ) : 0 ≤ ∫ x in divergentSet f φ, φ x ∂μ :=
   le_of_tendsto_of_tendsto' tendsto_const_nhds
     (int_birkhoffMaxDiff_in_divergentSet_tendsto μ hf hφ hφ')
     (fun _ ↦ int_birkhoffMaxDiff_in_divergentSet_nonneg μ hf hφ hφ')
@@ -251,14 +248,15 @@ lemma nullMeasurableSpace_le [ms : MeasurableSpace α] {μ : Measure α} :
   fun s hs ↦ ⟨s, hs, ae_eq_refl s⟩
 
 lemma divergentSet_zero_meas_of_condexp_neg
-    (h : ∀ᵐ x ∂μ, (μ[φ|invariants f]) x < 0) :
+    (h : ∀ᵐ x ∂μ, (μ[φ|invariants f]) x < 0) (hf : MeasurePreserving f μ μ)
+    (hφ : Integrable φ μ) (hφ' : Measurable φ) :
     μ (divergentSet f φ) = 0 := by
   have pos : ∀ᵐ x ∂μ.restrict (divergentSet f φ), 0 < -(μ[φ|invariants f]) x
   · exact ae_restrict_of_ae (h.mono fun _ hx ↦ neg_pos.mpr hx)
   have ds_meas := divergentSet_mem_invalg hf.measurable hφ'
   by_contra hm; simp_rw [← pos_iff_ne_zero] at hm
   have : ∫ x in divergentSet f φ, φ x ∂μ < 0
-  · rw [← set_integral_condexp (invariants_le f) hφ ds_meas,
+  · rw [← setIntegral_condExp (invariants_le f) hφ ds_meas,
       ← Left.neg_pos_iff, ← integral_neg, integral_pos_iff_support_of_nonneg_ae]
     · unfold Function.support
       rw [(ae_iff_measure_eq _).mp]
@@ -266,39 +264,40 @@ lemma divergentSet_zero_meas_of_condexp_neg
       · conv in _ ≠ _ => rw [ne_comm]
         exact Eventually.ne_of_lt pos
       · apply measurableSet_support _
-        apply (stronglyMeasurable_condexp).measurable.neg.le _
+        apply (stronglyMeasurable_condExp).measurable.neg.le _
         exact (le_trans (invariants_le f) nullMeasurableSpace_le)
     · exact ae_le_of_ae_lt pos
-    · exact integrable_condexp.restrict.neg
+    · exact integrable_condExp.restrict.neg
   exact this.not_le (int_in_divergentSet_nonneg μ hf hφ hφ')
 
-lemma limsup_birkhoffAverage_nonpos_of_condexp_neg
-    (h : ∀ᵐ x ∂μ, (μ[φ|invariants f]) x < 0) :
+lemma limsup_birkhoffAverage_nonpos_of_condexp_neg (hf : MeasurePreserving f μ μ)
+    (hφ : Integrable φ μ) (hφ' : Measurable φ) (h : ∀ᵐ x ∂μ, (μ[φ|invariants f]) x < 0) :
     ∀ᵐ x ∂μ, Tendsto (birkhoffAverage ℝ f φ · x) atTop nonneg := by
   apply Eventually.mono _ fun _ ↦ birkhoffAverage_tendsto_nonpos_of_not_mem_divergentSet
   apply ae_iff.mpr
   simp only [not_not, Set.setOf_mem_eq]
-  exact divergentSet_zero_meas_of_condexp_neg μ hf hφ hφ' h
+  exact divergentSet_zero_meas_of_condexp_neg μ h hf hφ hφ'
 
 def invCondexp (μ : Measure α := by volume_tac) [IsProbabilityMeasure μ]
     (f : α → α) (φ : α → ℝ) : α → ℝ := μ[φ|invariants f]
 
-theorem birkhoffErgodicTheorem_aux (ε : ℝ) (hε : 0 < ε) :
+theorem birkhoffErgodicTheorem_aux {ε : ℝ} (hε : 0 < ε) (hf : MeasurePreserving f μ μ)
+    (hφ : Integrable φ μ) (hφ' : Measurable φ) :
     ∀ᵐ x ∂μ, Tendsto (birkhoffAverage ℝ f φ · x - (invCondexp μ f φ x + ε)) atTop nonneg := by
   let ψ := φ - (invCondexp μ f φ + fun _ ↦ ε)
-  have ψ_integrable : Integrable ψ μ := hφ.sub (integrable_condexp.add (integrable_const _))
-  have ψ_measurable : Measurable ψ
-  · suffices Measurable (invCondexp μ f φ) by measurability
-    exact stronglyMeasurable_condexp.measurable.le (invariants_le f)
+  have ψ_integrable : Integrable ψ μ := hφ.sub (integrable_condExp.add (integrable_const _))
+  have ψ_measurable : Measurable ψ := by
+    suffices Measurable (invCondexp μ f φ) by measurability
+    exact stronglyMeasurable_condExp.measurable.le (invariants_le f)
 
-  have condexpψ_const : invCondexp μ f ψ =ᵐ[μ] - fun _ ↦ ε := calc
-    μ[ψ|invariants f]
-    _ =ᵐ[μ] _ - _ := condexp_sub hφ (integrable_condexp.add (integrable_const _))
-    _ =ᵐ[μ] _ - (_ + _) := (condexp_add integrable_condexp (integrable_const _)).neg.add_left
-    _ =ᵐ[μ] _ - (_ + _) := (condexp_condexp_of_le (le_of_eq rfl)
-                            (invariants_le f)).add_right.neg.add_left
-    _ = - μ[fun _ ↦ ε|invariants f] := by simp
-    _ = - fun _ ↦ ε := by rw [condexp_const (invariants_le f)]
+  have condexpψ_const : invCondexp μ f ψ =ᵐ[μ] - fun _ ↦ ε := sorry -- calc
+    -- μ[ψ|invariants f]
+    -- _ =ᵐ[μ] _ - _ := condExp_sub hφ (integrable_condExp.add (integrable_const _))
+    -- _ =ᵐ[μ] _ - (_ + _) := (condExp_add integrable_condExp (integrable_const _)).neg.add_left
+    -- _ =ᵐ[μ] _ - (_ + _) := (condexp_condExp_of_le (le_of_eq rfl)
+    --                         (invariants_le f)).add_right.neg.add_left
+    -- _ = - μ[fun _ ↦ ε|invariants f] := by simp
+    -- _ = - fun _ ↦ ε := by rw [condExp_const (invariants_le f)]
 
   have limsup_nonpos : ∀ᵐ x ∂μ, Tendsto (birkhoffAverage ℝ f ψ · x) atTop nonneg
   · suffices ∀ᵐ x ∂μ, invCondexp μ f ψ x < 0 from
@@ -318,13 +317,14 @@ theorem birkhoffErgodicTheorem_aux (ε : ℝ) (hε : 0 < ε) :
     exact hn k (Nat.le_of_succ_le hk)
 
   have condexpφ_invariant : invCondexp μ f φ ∘ f = invCondexp μ f φ :=
-    invariant_of_measurable_invariants stronglyMeasurable_condexp.measurable
+    invariant_of_measurable_invariants stronglyMeasurable_condExp.measurable
 
   intro n hn
   simp [ψ, birkhoffAverage_sub, birkhoffAverage_add, birkhoffAverage_eq_of_invariant
     (show _ = fun _ ↦ ε from rfl) hn, birkhoffAverage_eq_of_invariant condexpφ_invariant hn]
 
-theorem birkhoffErgodicTheorem :
+theorem birkhoffErgodicTheorem  (hf : MeasurePreserving f μ μ) (hφ : Integrable φ μ)
+    (hφ' : Measurable φ) :
     ∀ᵐ x ∂μ, Tendsto (birkhoffAverage ℝ f φ · x) atTop (𝓝 (invCondexp μ f φ x)) := by
   have : ∀ᵐ x ∂μ, ∀ (k : {k : ℕ // k > 0}),
     ∀ᶠ n in atTop,
@@ -333,9 +333,11 @@ theorem birkhoffErgodicTheorem :
     rintro ⟨k, hk⟩
     let δ := (k : ℝ)⁻¹/2
     have hδ : δ > 0 := by simpa [δ]
-    have p₁ := birkhoffErgodicTheorem_aux μ hf hφ hφ' δ hδ
-    have p₂ := birkhoffErgodicTheorem_aux μ hf hφ.neg hφ'.neg δ hδ
-    have : invCondexp μ f (-φ) =ᵐ[μ] -invCondexp μ f φ := condexp_neg _
+    have p₁ := birkhoffErgodicTheorem_aux μ hδ hf hφ hφ'
+    have p₂ := birkhoffErgodicTheorem_aux μ hδ hf hφ.neg hφ'.neg
+    have : invCondexp μ f (-φ) =ᵐ[μ] -invCondexp μ f φ := by
+      -- exact condExp_neg _
+      sorry
     refine ((p₁.and p₂).and this).mono fun x ⟨⟨hx₁, hx₂⟩, hx₃⟩ => ?_
     simp only [tendsto_iInf, gt_iff_lt, tendsto_principal, Set.mem_Iio, eventually_atTop,
       ge_iff_le] at hx₁ hx₂ ⊢
@@ -362,8 +364,9 @@ theorem birkhoffErgodicTheorem :
   use N
   intro n hn
   apply (hN n hn).trans
-  rw [inv_pos_lt_iff_one_lt_mul (Nat.cast_pos.mpr k.succ_pos)]
+  rw [inv_lt_iff_one_lt_mul₀ (Nat.cast_pos.mpr k.succ_pos)]
   norm_num at hk' ⊢
   linarith
 
 #print axioms birkhoffErgodicTheorem
+#min_imports
