@@ -10,7 +10,11 @@ import BirkhoffErgodicThm.BirkhoffSumPR
 import BirkhoffErgodicThm.FilterPR
 import BirkhoffErgodicThm.InvariantsPR
 
+set_option maxHeartbeats 1000000
+
 section BirkhoffMax
+
+open MeasureTheory
 
 variable {α : Type*}
 
@@ -42,13 +46,27 @@ lemma birkhoffMaxDiff_antitone : Antitone (birkhoffMaxDiff f φ) := by
   right
   exact (birkhoffMax f φ).monotone' h _
 
+variable {α : Type*} [msα : MeasurableSpace α] (μ : Measure α := by volume_tac)
+         [hμ : IsProbabilityMeasure μ]
+
 @[measurability]
-lemma birkhoffSum_measurable [MeasurableSpace α]
-    {f : α → α} (hf : Measurable f)
-    {φ : α → ℝ} (hφ : Measurable φ) :
-    Measurable (birkhoffSum f φ n) := by
-  apply Finset.measurable_sum
-  measurability
+lemma birkhoffSum_measurable
+    {f : α → α} (hf : MeasurePreserving f μ μ)
+    {φ : α → ℝ} (hφ : AEMeasurable φ μ) :
+    AEMeasurable (birkhoffSum f φ n) μ := by
+  apply Finset.aemeasurable_sum
+  intro i a
+  simp_all only [Finset.mem_range]
+  apply hf.aemeasurable_comp_iff
+
+  on_goal
+    2 =>
+    apply
+      Measurable.iterate
+  on_goal
+    2 =>
+    simp_all only
+  simp_all only
 
 @[measurability]
 lemma birkhoffMax_measurable [MeasurableSpace α]
@@ -70,9 +88,9 @@ variable {α : Type*} [msα : MeasurableSpace α] (μ : Measure α := by volume_
 def birkhoffSup (f : α → α) (φ : α → ℝ) (x : α) : EReal := iSup λ n ↦ ↑(birkhoffSum f φ (n + 1) x)
 
 lemma birkhoffSup_measurable
-    {f : α → α} (hf : Measurable f)
-    {φ : α → ℝ} (hφ : Measurable φ) :
-    Measurable (birkhoffSup f φ) := measurable_iSup
+    {f : α → α} (hf : AEMeasurable f μ)
+    {φ : α → ℝ} (hφ : AEMeasurable φ μ) :
+    AEMeasurable (birkhoffSup f φ) μ := measurable_iSup
   (fun _ ↦ Measurable.coe_real_ereal (birkhoffSum_measurable hf hφ))
 
 /-- The set of points `x` for which `birkhoffSup f φ x = ⊤`. -/
@@ -109,11 +127,11 @@ lemma divergentSet_invariant : f x ∈ divergentSet f φ ↔ x ∈ divergentSet 
         exact lt_trans hN hNN
     · use N
 
-lemma divergentSet_measurable
+lemma divergentSet_nullmeasurable
     {f : α → α} (hf : Measurable f)
-    {φ : α → ℝ} (hφ : Measurable φ) :
-    MeasurableSet (divergentSet f φ) :=
-      measurableSet_preimage (birkhoffSup_measurable hf hφ) (measurableSet_singleton _)
+    {φ : α → ℝ} (hφ : AEMeasurable φ μ) :
+    NullMeasurableSet (divergentSet f φ) μ :=
+      (nullMeasurableSet_singleton _).preimage (birkhoffSup_measurable hf hφ)
 
 lemma divergentSet_mem_invalg
     {f : α → α} (hf : Measurable f)
@@ -178,7 +196,10 @@ lemma birkhoffAverage_tendsto_nonpos_of_not_mem_divergentSet
 
 /- From now on, assume f is measure-preserving and φ is integrable. -/
 variable {f : α → α} (hf : MeasurePreserving f μ μ)
-         {φ : α → ℝ} (hφ : Integrable φ μ) (hφ' : Measurable φ) /- seems necessary? -/
+         {φ : α → ℝ} (hφ : Integrable φ μ)
+
+def φ' : α → ℝ := hφ.aemeasurable.choose
+def hφ' : Measurable (φ' μ hφ) ∧ φ =ᵐ[μ] (φ' μ hφ) := hφ.aemeasurable.choose_spec
 
 lemma iterates_integrable : Integrable (φ ∘ f^[i]) μ := by
   apply (integrable_map_measure _ _).mp
@@ -216,7 +237,7 @@ lemma int_birkhoffMaxDiff_in_divergentSet_tendsto :
     intro x
     rw [Real.norm_eq_abs]
     exact abs_le_max_abs_abs (by simp [birkhoffMaxDiff_aux]) (birkhoffMaxDiff_antitone (zero_le n) _)
-  · exact (ae_restrict_iff' (divergentSet_measurable hf.measurable hφ')).mpr
+  · exact (ae_restrict_iff'₀ (divergentSet_measurable hf.measurable hφ')).mpr
       (ae_of_all _ fun _ hx ↦ birkhoffMaxDiff_tendsto_of_mem_divergentSet hx)
 
 lemma int_birkhoffMaxDiff_in_divergentSet_nonneg :
@@ -240,8 +261,8 @@ lemma int_birkhoffMaxDiff_in_divergentSet_nonneg :
 
 lemma int_in_divergentSet_nonneg : 0 ≤ ∫ x in divergentSet f φ, φ x ∂μ :=
   le_of_tendsto_of_tendsto' tendsto_const_nhds
-    (int_birkhoffMaxDiff_in_divergentSet_tendsto μ hf hφ hφ')
-    (λ _ ↦ int_birkhoffMaxDiff_in_divergentSet_nonneg μ hf hφ hφ')
+    (int_birkhoffMaxDiff_in_divergentSet_tendsto μ hf hφ)
+    (λ _ ↦ int_birkhoffMaxDiff_in_divergentSet_nonneg μ hf hφ)
 
 /- these seem to be missing? -/
 lemma nullMeasurableSpace_le [ms : MeasurableSpace α] {μ : Measure α} :
@@ -253,7 +274,7 @@ lemma divergentSet_zero_meas_of_condexp_neg
     μ (divergentSet f φ) = 0 := by
   have pos : ∀ᵐ x ∂μ.restrict (divergentSet f φ), 0 < -(μ[φ|invariants f]) x
   · exact ae_restrict_of_ae (h.mono λ _ hx ↦ neg_pos.mpr hx)
-  have ds_meas := divergentSet_mem_invalg hf.measurable hφ'
+  have ds_meas := divergentSet_mem_invalg hf.measurable sorry
   by_contra hm; simp_rw [← pos_iff_ne_zero] at hm
   have : ∫ x in divergentSet f φ, φ x ∂μ < 0
   · rw [← set_integral_condexp (invariants_le f) hφ ds_meas,
