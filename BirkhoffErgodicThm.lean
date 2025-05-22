@@ -335,9 +335,7 @@ theorem birkhoffErgodicTheorem  (hf : MeasurePreserving f μ μ) (hφ : Integrab
     have hδ : δ > 0 := by simpa [δ]
     have p₁ := birkhoffErgodicTheorem_aux μ hδ hf hφ hφ'
     have p₂ := birkhoffErgodicTheorem_aux μ hδ hf hφ.neg hφ'.neg
-    have : invCondexp μ f (-φ) =ᵐ[μ] -invCondexp μ f φ := by
-      -- exact condExp_neg _
-      sorry
+    have : invCondexp μ f (-φ) =ᵐ[μ] -invCondexp μ f φ := condExp_neg _ _
     refine ((p₁.and p₂).and this).mono fun x ⟨⟨hx₁, hx₂⟩, hx₃⟩ => ?_
     simp only [tendsto_iInf, gt_iff_lt, tendsto_principal, Set.mem_Iio, eventually_atTop,
       ge_iff_le] at hx₁ hx₂ ⊢
