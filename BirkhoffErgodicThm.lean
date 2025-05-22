@@ -19,8 +19,7 @@ lemma birkhoffMax_succ : birkhoffMax f φ n.succ x = φ x + 0 ⊔ birkhoffMax f 
   simp only [Pi.add_apply, add_right_inj]
   rw [partialSups_succ']
   simp only [birkhoffSum_zero', Pi.zero_comp, Pi.sup_apply, Pi.zero_apply]
-  simp_rw [partialSups_apply, Function.comp_apply, ← partialSups_apply];
-  sorry
+  simp_rw [Pi.partialSups_apply, Function.comp_apply, ← Pi.partialSups_apply]; rfl
 
 abbrev birkhoffMaxDiff (f : α → α) (φ : α → ℝ) (n : ℕ) (x : α) :=
   birkhoffMax f φ (n + 1) x - birkhoffMax f φ n (f x)
