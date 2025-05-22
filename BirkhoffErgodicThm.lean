@@ -58,7 +58,6 @@ noncomputable section BirkhoffThm
 open MeasureTheory MeasurableSpace Filter Topology
 
 variable {α : Type*} [msα : MeasurableSpace α] (μ : Measure α := by volume_tac)
-        [hμ : IsProbabilityMeasure μ]
 
 /-- The supremum of `birkhoffSum f φ (n + 1) x` over `n : ℕ`. -/
 def birkhoffSup (f : α → α) (φ : α → ℝ) (x : α) : EReal := iSup fun n ↦ ↑(birkhoffSum f φ (n + 1) x)
@@ -243,9 +242,11 @@ lemma int_in_divergentSet_nonneg (hf : MeasurePreserving f μ μ)
     (fun _ ↦ int_birkhoffMaxDiff_in_divergentSet_nonneg μ hf hφ hφ')
 
 /- these seem to be missing? -/
-lemma nullMeasurableSpace_le [ms : MeasurableSpace α] {μ : Measure α} :
-    ms ≤ NullMeasurableSpace.instMeasurableSpace (α := α) (μ := μ) :=
+lemma nullMeasurableSpace_le {μ : Measure α} :
+    msα ≤ NullMeasurableSpace.instMeasurableSpace (α := α) (μ := μ) :=
   fun s hs ↦ ⟨s, hs, ae_eq_refl s⟩
+
+variable [hμ : IsProbabilityMeasure μ]
 
 lemma divergentSet_zero_meas_of_condexp_neg
     (h : ∀ᵐ x ∂μ, (μ[φ|invariants f]) x < 0) (hf : MeasurePreserving f μ μ)
@@ -365,6 +366,3 @@ theorem birkhoffErgodicTheorem  (hf : MeasurePreserving f μ μ) (hφ : Integrab
   rw [inv_lt_iff_one_lt_mul₀ (Nat.cast_pos.mpr k.succ_pos)]
   norm_num at hk' ⊢
   linarith
-
-#print axioms birkhoffErgodicTheorem
-#min_imports
