@@ -1,6 +1,7 @@
 import BirkhoffErgodicThm.BirkhoffSumPR
 import BirkhoffErgodicThm.InvariantsPR
 import BirkhoffErgodicThm.PartialSupsPR
+import BirkhoffErgodicThm.FilterPR
 
 section BirkhoffMax
 
@@ -289,14 +290,14 @@ theorem birkhoffErgodicTheorem_aux {ε : ℝ} (hε : 0 < ε) (hf : MeasurePreser
     suffices Measurable (invCondexp μ f φ) by measurability
     exact stronglyMeasurable_condExp.measurable.le (invariants_le f)
 
-  have condexpψ_const : invCondexp μ f ψ =ᵐ[μ] - fun _ ↦ ε := sorry -- calc
-    -- μ[ψ|invariants f]
-    -- _ =ᵐ[μ] _ - _ := condExp_sub hφ (integrable_condExp.add (integrable_const _))
-    -- _ =ᵐ[μ] _ - (_ + _) := (condExp_add integrable_condExp (integrable_const _)).neg.add_left
-    -- _ =ᵐ[μ] _ - (_ + _) := (condexp_condExp_of_le (le_of_eq rfl)
-    --                         (invariants_le f)).add_right.neg.add_left
-    -- _ = - μ[fun _ ↦ ε|invariants f] := by simp
-    -- _ = - fun _ ↦ ε := by rw [condExp_const (invariants_le f)]
+  have condexpψ_const : invCondexp μ f ψ =ᵐ[μ] - fun _ ↦ ε := calc
+    μ[ψ|invariants f]
+    _ =ᵐ[μ] _ - _ := condExp_sub hφ (integrable_condExp.add (integrable_const _)) _
+    _ =ᵐ[μ] _ - (_ + _) := (condExp_add integrable_condExp (integrable_const _) _).neg.add_left
+    _ =ᵐ[μ] _ - (_ + _) := (condExp_condExp_of_le (le_of_eq rfl)
+                            (invariants_le f)).add_right.neg.add_left
+    _ = - μ[fun _ ↦ ε|invariants f] := by simp
+    _ = - fun _ ↦ ε := by rw [condExp_const (invariants_le f)]
 
   have limsup_nonpos : ∀ᵐ x ∂μ, Tendsto (birkhoffAverage ℝ f ψ · x) atTop nonneg
   · suffices ∀ᵐ x ∂μ, invCondexp μ f ψ x < 0 from
